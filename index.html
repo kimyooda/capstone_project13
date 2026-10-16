@@ -1,0 +1,490 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wearable OLED - Face Tracking</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #10141c;
+      color: #f4f6fa;
+      font-family: Arial, sans-serif;
+    }
+
+    .container { max-width: 440px; margin: auto; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 17px; }
+
+    .card {
+      background: #1c2431;
+      border: 1px solid #354052;
+      border-radius: 18px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+
+    .muted {
+      color: #aeb9ca;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .primary { background: #b8f36b; color: #14200c; }
+    .secondary { background: #354052; color: white; }
+    .danger { background: #512e39; color: #ffd9e0; }
+
+    video {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      background: #080a0d;
+      transform: scaleX(-1);
+    }
+
+    .watch {
+      width: 220px;
+      height: 220px;
+      margin: 20px auto;
+      padding: 12px;
+      border: 5px solid #626d7d;
+      border-radius: 48px;
+      background: #080a0d;
+    }
+
+    .watch-screen {
+      height: 100%;
+      border-radius: 34px;
+      background: #152a3a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: filter 0.2s;
+    }
+
+    .sun { font-size: 35px; }
+    .time { font-size: 30px; font-weight: bold; }
+    .label { font-size: 12px; margin-top: 8px; }
+
+    .meter {
+      height: 12px;
+      background: #354052;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .meter-fill {
+      width: 20%;
+      height: 100%;
+      background: #b8f36b;
+      transition: width 0.2s;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 10px;
+      background: #293445;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .row span:last-child { text-align: right; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Outdoor OLED</h1>
+  <p class="muted">
+    얼굴 상하 회전 기반 · 개인별 시청 각도 최적화 프로토타입
+  </p>
+
+  <section class="card">
+    <h2>1. 얼굴 인식</h2>
+    <video id="camera" autoplay playsinline muted></video>
+    <div class="status" id="status" style="margin-top:12px">
+      카메라 연결 전입니다.
+    </div>
+    <button class="primary" id="startBtn">얼굴 인식 시작</button>
+    <button class="secondary" id="stopBtn" disabled>카메라 종료</button>
+    <p class="muted">
+      카메라를 눈높이에 두고 얼굴이 화면 안에 들어오도록 해주세요.
+      영상 처리는 브라우저에서 수행합니다.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>2. 워치 화면 미리보기</h2>
+    <div class="watch">
+      <div class="watch-screen" id="watchScreen">
+        <div class="sun">☀️</div>
+        <div class="time">09:41</div>
+        <div>OUTDOOR</div>
+        <div class="label" id="screenLabel">각도 미등록</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span>시연 휘도 수준</span>
+      <strong id="brightnessText">20%</strong>
+    </div>
+    <div class="meter">
+      <div class="meter-fill" id="meterFill"></div>
+    </div>
+    <p class="muted">
+      실제 워치 하드웨어의 휘도가 아닌 브라우저 내 시뮬레이션입니다.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>3. 시청 각도 설정</h2>
+    <div class="status">
+      원하는 자세로 고개를 두고 현재 각도를 등록하세요.
+      등록 각도 ±10°에서는 최고 휘도를 유지합니다.
+    </div>
+    <button class="primary" id="calibrateBtn" disabled>
+      현재 얼굴 각도 등록
+    </button>
+    <button class="danger" id="resetBtn">등록 각도 초기화</button>
+  </section>
+
+  <section class="card">
+    <h2>4. 실시간 측정 정보</h2>
+    <div class="row">
+      <span>얼굴 인식</span>
+      <strong id="faceText">대기</strong>
+    </div>
+    <div class="row">
+      <span>현재 Pitch</span>
+      <strong id="pitchText">측정 대기</strong>
+    </div>
+    <div class="row">
+      <span>등록 Pitch</span>
+      <strong id="savedText">미등록</strong>
+    </div>
+    <div class="row">
+      <span>등록 각도와 차이</span>
+      <strong id="differenceText">--</strong>
+    </div>
+    <div class="row">
+      <span>현재 상태</span>
+      <strong id="levelText">기본 휘도</strong>
+    </div>
+    <p class="muted">
+      Pitch는 고개를 위아래로 회전하는 각도입니다.
+      계산된 값은 카메라 방향과 추정 오차의 영향을 받을 수 있습니다.
+    </p>
+  </section>
+</div>
+
+<script type="module">
+  import {
+    FaceLandmarker,
+    FilesetResolver
+  } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs";
+
+  // ===== 1. 설정 =====
+  const MAX_BRIGHTNESS = 100;
+  const MIN_BRIGHTNESS = 20;
+  const TOLERANCE = 10;
+  const REDUCTION_RANGE = 60;
+  const STORAGE_KEY = "outdoorWatchPitch";
+
+  const $ = (id) => document.getElementById(id);
+
+  let faceLandmarker = null;
+  let cameraStream = null;
+  let running = false;
+  let currentPitch = null;
+  let savedPitch = loadSavedPitch();
+  let lastVideoTime = -1;
+
+  // ===== 2. 저장된 기준 각도 =====
+  function loadSavedPitch() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw === null ? null : Number(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function savePitch() {
+    if (currentPitch === null) {
+      setStatus("얼굴 각도가 아직 측정되지 않았습니다.");
+      return;
+    }
+
+    savedPitch = currentPitch;
+
+    try {
+      localStorage.setItem(STORAGE_KEY, String(savedPitch));
+    } catch (error) {
+      console.warn("각도를 브라우저에 저장하지 못했습니다.", error);
+    }
+
+    renderSavedPitch();
+    updateBrightness();
+    setStatus("현재 얼굴 각도를 기준으로 등록했습니다.");
+  }
+
+  function resetPitch() {
+    savedPitch = null;
+
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn("저장 각도를 초기화하지 못했습니다.", error);
+    }
+
+    renderSavedPitch();
+    updateBrightness();
+    setStatus("기준 각도를 초기화했습니다.");
+  }
+
+  function renderSavedPitch() {
+    $("savedText").textContent =
+      savedPitch === null ? "미등록" : savedPitch.toFixed(1) + "°";
+  }
+
+  // ===== 3. 얼굴 회전 행렬에서 Pitch 계산 =====
+  function getPitchFromMatrix(matrix) {
+    // MediaPipe 얼굴 변환 행렬의 회전 성분을 이용합니다.
+    const m = matrix.data;
+
+    if (!m || m.length < 16) {
+      throw new Error("얼굴 회전 행렬을 읽을 수 없습니다.");
+    }
+
+    // 행렬에서 X축 회전에 해당하는 각도를 추정합니다.
+    // 카메라 방향과 모델 좌표계에 따라 부호가 달라질 수 있습니다.
+    const pitchRadians = Math.atan2(m[9], m[10]);
+
+    return pitchRadians * (180 / Math.PI);
+  }
+
+  // ===== 4. 휘도 계산 =====
+  function calculateBrightness(difference) {
+    if (difference === null) return MIN_BRIGHTNESS;
+    if (difference <= TOLERANCE) return MAX_BRIGHTNESS;
+
+    const progress = Math.min(
+      1,
+      (difference - TOLERANCE) / REDUCTION_RANGE
+    );
+
+    return Math.round(
+      MAX_BRIGHTNESS -
+      progress * (MAX_BRIGHTNESS - MIN_BRIGHTNESS)
+    );
+  }
+
+  function updateBrightness() {
+    const difference = savedPitch === null || currentPitch === null
+      ? null
+      : Math.abs(currentPitch - savedPitch);
+
+    const brightness = savedPitch === null
+      ? MIN_BRIGHTNESS
+      : calculateBrightness(difference);
+
+    $("brightnessText").textContent = brightness + "%";
+    $("meterFill").style.width = brightness + "%";
+    $("watchScreen").style.filter =
+      `brightness(${brightness / 100})`;
+
+    $("differenceText").textContent =
+      difference === null ? "--" : difference.toFixed(1) + "°";
+
+    if (savedPitch === null) {
+      $("levelText").textContent = "기본 휘도";
+      $("screenLabel").textContent = "각도 미등록";
+    } else if (difference === null) {
+      $("levelText").textContent = "측정 대기";
+      $("screenLabel").textContent = "얼굴 인식 대기";
+    } else if (difference <= TOLERANCE) {
+      $("levelText").textContent = "최고 휘도";
+      $("screenLabel").textContent = "최적 시청 각도";
+    } else {
+      $("levelText").textContent = "휘도 감소";
+      $("screenLabel").textContent = "각도 벗어남";
+    }
+  }
+
+  function setStatus(message) {
+    $("status").textContent = message;
+  }
+
+  // ===== 5. 얼굴 인식 모델 준비 =====
+  async function createFaceLandmarker() {
+    if (faceLandmarker) return faceLandmarker;
+
+    setStatus("얼굴 인식 모델을 불러오는 중입니다. 잠시 기다려 주세요.");
+
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm"
+    );
+
+    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        delegate: "CPU"
+      },
+      runningMode: "VIDEO",
+      numFaces: 1,
+      outputFacialTransformationMatrixes: true
+    });
+
+    return faceLandmarker;
+  }
+
+  // ===== 6. 카메라 시작 =====
+  async function startCamera() {
+    if (running) return;
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error(
+          "카메라를 사용할 수 없습니다. HTTPS 또는 localhost에서 실행해 주세요."
+        );
+      }
+
+      await createFaceLandmarker();
+
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      });
+
+      $("camera").srcObject = cameraStream;
+      await $("camera").play();
+
+      running = true;
+      lastVideoTime = -1;
+
+      $("startBtn").disabled = true;
+      $("stopBtn").disabled = false;
+
+      setStatus("카메라가 연결되었습니다. 얼굴을 화면 중앙에 맞춰주세요.");
+      requestAnimationFrame(detectFrame);
+    } catch (error) {
+      console.error(error);
+      setStatus("시작 실패: " + error.message);
+      stopCamera();
+    }
+  }
+
+  // ===== 7. 실시간 얼굴 측정 =====
+  function detectFrame() {
+    if (!running) return;
+
+    const video = $("camera");
+
+    if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+      lastVideoTime = video.currentTime;
+
+      try {
+        const result = faceLandmarker.detectForVideo(
+          video,
+          performance.now()
+        );
+
+        const hasFace = result.faceLandmarks?.length > 0;
+        const matrices = result.facialTransformationMatrixes;
+
+        if (hasFace && matrices?.length > 0) {
+          currentPitch = getPitchFromMatrix(matrices[0]);
+
+          $("faceText").textContent = "인식됨";
+          $("pitchText").textContent = currentPitch.toFixed(1) + "°";
+          $("calibrateBtn").disabled = false;
+
+          updateBrightness();
+
+          if (savedPitch === null) {
+            setStatus("얼굴을 인식하고 있습니다. 원하는 자세에서 각도를 등록하세요.");
+          }
+        } else {
+          $("faceText").textContent = "얼굴 없음";
+          $("pitchText").textContent = "측정 대기";
+          $("calibrateBtn").disabled = true;
+          currentPitch = null;
+          updateBrightness();
+          setStatus("얼굴을 찾을 수 없습니다. 카메라를 바라봐 주세요.");
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus("얼굴 각도 계산 중 오류가 발생했습니다: " + error.message);
+      }
+    }
+
+    requestAnimationFrame(detectFrame);
+  }
+
+  // ===== 8. 카메라 종료 =====
+  function stopCamera() {
+    running = false;
+
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+
+    $("camera").srcObject = null;
+    $("startBtn").disabled = false;
+    $("stopBtn").disabled = true;
+    $("calibrateBtn").disabled = true;
+
+    $("faceText").textContent = "대기";
+    $("pitchText").textContent = "측정 대기";
+    currentPitch = null;
+    updateBrightness();
+
+    setStatus("카메라가 종료되었습니다.");
+  }
+
+  // ===== 9. 버튼 연결 =====
+  $("startBtn").addEventListener("click", startCamera);
+  $("stopBtn").addEventListener("click", stopCamera);
+  $("calibrateBtn").addEventListener("click", savePitch); 
+  $("resetBtn").addEventListener("click", resetPitch);
+
+  // ===== 10. 최초 화면 =====
+  renderSavedPitch();
+  updateBrightness();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px 16px;
+  font-family: Arial, "Malgun Gothic", sans-serif;
+  background: #101820;
+  color: #f5f7fa;
+}
+
+.app {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  color: #f5c451;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: clamp(28px, 6vw, 42px);
+}
+
+.subtitle,
+.muted,
+.note,
+footer {
+  color: #aab8c2;
+  line-height: 1.6;
+}
+
+.display-card,
+.status-card,
+.data-card {
+  background: #1e2d37;
+  border: 1px solid #34434d;
+  border-radius: 18px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.display-card {
+  transition: background-color 0.25s, box-shadow 0.25s;
+}
+
+.brightness-value {
+  font-size: 56px;
+  font-weight: 700;
+  margin: 12px 0;
+}
+
+.meter {
+  height: 10px;
+  border-radius: 20px;
+  background: #34434d;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 50%;
+  background: #f5c451;
+  transition: width 0.2s;
+}
+
+.preview {
+  min-height: 150px;
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #263946;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.preview strong {
+  font-size: 28px;
+}
+
+.note {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.status-card p,
+.data-card p {
+  color: #aab8c2;
+}
+
+.status-card strong {
+  overflow-wrap: anywhere;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+button {
+  flex: 1;
+  min-width: 150px;
+  border: 0;
+  border-radius: 12px;
+  padding: 15px;
+  background: #f5c451;
+  color: #101820;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #34434d;
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#message {
+  padding-top: 12px;
+  border-top: 1px solid #34434d;
+  line-height: 1.6;
+}
+
+footer {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 30px;
+}
+
+@media (max-width: 420px) {
+  .display-card,
+  .status-card,
+  .data-card {
+    padding: 18px;
+  }
+}
+    
